@@ -64,12 +64,14 @@ int main() {
             // Задаем тип контента application/json, чтобы браузер или приложение понимали формат
             crow::response res;
             res.set_header("Content-Type", "application/json");
+             // ВОТ ЭТА КРИТИЧЕСКИ ВАЖНАЯ СТРОЧКА ДЛЯ КЛИЕНТА (СНИМАЕТ CORS ОШИБКУ!)
+            res.set_header("Access-Control-Allow-Origin", "*");
             res.write(responseJson.dump()); // dump() превращает JSON-объект обратно в строку для отправки
             return res;
         }
         catch (const exception& e) {
             crow::response res(500); // Ошибка сервера
-            res.write("Internal Server Error: " + std::string(e.what()));
+            res.write("Internal Server Error: " + string(e.what()));
             return res;
         }
     });

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 App</title>
+    <style>
+        /* Общие стили в духе Формулы*/
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: #15151e; /* Карбоновый темный цвет F1 */
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Шапка приложения */
+        .header {
+            background-color: #1f1f27;
+            padding: 15px;
+            text-align: center;
+            border-bottom: 3px solid #e10600; /* Фирменный красный цвет F1 */
+            font-weight: bold;
+            font-size: 20px;
+            letter-spacing: 1px;
+        }
+
+        /* Контейнер для страниц */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            padding-bottom: 80px; /* Место под нижнее меню */
+        }
+
+        /* Стили самих страниц */
+        .page {
+            display: none; /* По умолчанию скрываем все страницы */
+        }
+
+        .page.active {
+            display: block; /* Показываем только активную */
+        }
+
+        /* Карточка гонки */
+        .race-card {
+            background-color: #1f1f27;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 5px solid #e10600;
+        }
+
+        .race-card h3 {
+            margin: 0 0 5px 0;
+            color: #ffffff;
+        }
+
+        .race-card p {
+            margin: 5px 0;
+            color: #a0a0a5;
+            font-size: 14px;
+        }
+
+        /* Нижняя панель вкладок (как на телефоне) */
+        .nav-bar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            height: 60px;
+            background-color: #1f1f27;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid #2f2f39;
+        }
+
+        .nav-item {
+            color: #a0a0a5;
+            text-decoration: none;
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 5px;
+        }
+
+        .nav-item.active {
+            color: #e10600; /* Активная вкладка становится красной */
+            font-weight: bold;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+            margin-bottom: 2px;
+        }
+
+    </style>
+</head>
+<BODY>
+    <!-- Шапка -->
+    <div class="header">🏎️ FORMULA 1</div>
+
+    <!-- Область контента, где переключаются страницы -->
+    <div class="content">
+
+        <!-- СТРАНИЦА 1: КАЛЕНДАРЬ -->
+        <div id="page-calendar" class="page active">
+            <h2>Расписание гонок</h2>
+            <div id="calendar-list">
+                <p>Загрузка данных из C++ сервера...</p>
+            </div>
+        </div>
+
+        <!-- СТРАНИЦА 2: ТАБЛИЦЫ -->
+        <div id="page-tables" class="page">
+            <h2>Турнирная таблица</h2>
+            <p>Здесь будет Кубок конструкторов и Личный зачет.</p>
+        </div>
+
+        <!-- СТРАНИЦА 3: ПИЛОТЫ -->
+        <div id="page-drivers" class="page">
+            <h2>Гонщики</h2>
+            <p>Здесь будут карточки Хэмилтона, Леклера и Ферстаппена.</p>
+        </div>
+
+    </div>
+
+    <!-- Нижнее мобильное меню -->
+    <nav class="nav-bar">
+        <button class="nav-item active" onclick="switchPage('calendar', this)">
+            <span class="nav-icon">📅</span>
+            <span>Календарь</span>
+        </button>
+        <button class="nav-item" onclick="switchPage('tables', this)">
+            <span class="nav-icon">🏆</span>
+            <span>Таблицы</span>
+        </button>
+        <button class="nav-item" onclick="switchPage('drivers', this)">
+            <span class="nav-icon">👤</span>
+            <span>Пилоты</span>
+        </button>
+    </nav>
+
+    <script>// Логика переключения страниц
+        function switchPage(pageId, element) {
+            // 1. Скрываем все страницы
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            // 2. Снимаем выделение со всех кнопок меню
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            // 3. Показываем нужную страницу
+            document.getElementById('page-' + pageId).classList.add('active');
+            // 4. Выделяем нажатую кнопку красным цветом
+            element.classList.add('active');
+        }
+
+        // ФУНКЦИЯ СВЯЗИ С C++ СЕРВЕРОМ
+        // async означает, что функция асинхронная — она скачивает данные в фоне и не вешает браузер
+        async function loadCalendar() {
+            const calendarList = document.getElementById('calendar-list');
+
+            try {
+                // Посылаем сетевой запрос к нашему C++ серверу Crow на порт 18080
+                // await заставляет программу подождать, пока данные летят по сети
+                const response = await fetch('http://localhost:18080/api/calendar');
+
+                // Переводим текстовый ответ сервера в удобный JSON-массив
+                const races = await response.json();
+
+                // Очищаем текст "Загрузка данных...", который был написан изначально
+                calendarList.innerHTML = '';
+
+                // Если сервер вернул пустой массив
+                if (races.length === 0) {
+                    calendarList.innerHTML = '<p>Гонки не найдены.</p>';
+                    return;
+                }
+
+                // Циклом проходимся по каждой гонке, которую прислал C++
+                races.forEach(race => {
+                    // Создаем красивую HTML-карточку для гонки
+                    const card = document.createElement('div');
+                    card.className = 'race-card'; // Применяем наш трафарет стилей F1
+
+                    // Заполняем карточку данными, которые отфильтровал наш C++ бэкенд
+                    card.innerHTML = `
+                        <h3>${race.name}</h3>
+                        <p><strong>ID гонки:</strong> ${race.id}</p>
+                        <p><strong>Страна проведения:</strong> 🏁 ${race.country}</p>
+                        <p><strong>Дата старта уикенда:</strong> 📅 ${race.date}</p>
+                    `;
+
+                    // Добавляем готовую карточку на страницу в браузере
+                    calendarList.appendChild(card);
+                });
+
+            } catch (error) {
+                // Если C++ сервер выключен или произошел сбой сети
+                console.error("Ошибка загрузки:", error);
+                calendarList.innerHTML = `
+                    <p style="color: #e10600; font-weight: bold;">
+                        ❌ Не удалось подключиться к C++ серверу.
+                    </p>
+                    <p style="font-size: 14px; color: #a0a0a5;">
+                        Убедись, что черное окно консоли в Visual Studio запущено.
+                    </p>
+                `;
+            }
+        }
+
+        // Запускаем загрузку календаря автоматически при открытии страницы
+        window.onload = loadCalendar;
+    </script>
+</BODY>
+</HTML>
