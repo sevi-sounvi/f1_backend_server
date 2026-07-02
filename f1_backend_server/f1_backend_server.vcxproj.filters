@@ -29,6 +29,9 @@
     <ClInclude Include="f1_structures.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="crow_all.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
