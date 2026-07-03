@@ -79,8 +79,8 @@ int main() {
     });
 
     CROW_ROUTE(app, "/api/standings")([]() {
-        wstring host = L"api.openf1.org";
-        wstring path = L"/v1/drivers?session_key=latest";
+        wstring host = L"api.jolpi.ca";
+        wstring path = L"/ergast/f1/2026/driverstandings.json"; 
 
         string rawJsonData = makeHttpRequest(host, path);
 
@@ -88,25 +88,43 @@ int main() {
             json parsedJson = json::parse(rawJsonData);
             json responseJson = json::array();
 
-            for (const auto& item : parsedJson) {
-                json driver;
+            auto standingsLists = parsedJson["MRData"]["StandingsTable"]["StandingsLists"];
 
-                if (!item.is_object()) {
-                    continue; // Если это не объект (а строка), просто пропускаем этот элемент и идем дальше
+            // Проверяем, что этот список не пустой
+            if (!standingsLists.empty()) {
+
+                // Берем самый первый элемент массива StandingsLists (индекс 0) 
+                // и заходим в массив "DriverStandings" [0.1]
+                auto driverStandings = standingsLists[0]["DriverStandings"];
+
+                for (const auto& item : driverStandings) {
+                    json driver;
+
+                    // Если это не объект (а строка), просто пропускаем этот элемент и идем дальше
+                    if (!item.is_object()) continue; 
+                    
+                    // Открываем внутреннюю папку "Driver", чтобы забрать имя и номер
+                    auto driverInfo = item["Driver"];
+                    driver["number"] = driverInfo.value("permanentNumber", "0"); // Номер пилота
+
+                    // Собираем полное имя (Имя + Пробел + Фамилия) [0.1]
+                    string firstName = driverInfo.value("givenName", "");
+                    string lastName = driverInfo.value("familyName", "");
+                    driver["full_name"] = firstName + " " + lastName;
+
+                    // Забираем очки
+                    string pointsStr = item.value("points", "0");
+                    driver["points"] = stof(pointsStr); ;
+
+                    responseJson.push_back(driver);
                 }
 
-                driver["number"] = item.value("driver_number", 0);
-                driver["full_name"] = item.value("broadcast_name", "Unknown Name");
-                driver["points"] = 100;
-
-                responseJson.push_back(driver);
+                crow::response res;
+                res.set_header("Content-Type", "application/json");
+                res.set_header("Access-Control-Allow-Origin", "*");
+                res.write(responseJson.dump());
+                return res;
             }
-
-            crow::response res;
-            res.set_header("Content-Type", "application/json");
-            res.set_header("Access-Control-Allow-Origin", "*");
-            res.write(responseJson.dump());
-            return res;
         }
         catch (const exception& e) {
             crow::response res(500);
