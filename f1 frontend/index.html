@@ -205,7 +205,7 @@
             try {
                 // Посылаем сетевой запрос к нашему C++ серверу Crow на порт 18080
                 // await заставляет программу подождать, пока данные летят по сети
-                const response = await fetch('http://localhost:18080/api/calendar');
+                const response = await fetch('http://127.0.0.1:18080/api/calendar');
 
                 // Переводим текстовый ответ сервера в удобный JSON-массив
                 const races = await response.json();
@@ -236,8 +236,8 @@
                     // Добавляем готовую карточку на страницу в браузере
                     calendarList.appendChild(card);
                 });
-
-            } catch (error) {
+            }
+            catch (error) {
                 // Если C++ сервер выключен или произошел сбой сети
                 console.error("Ошибка загрузки:", error);
                 calendarList.innerHTML = `
@@ -251,8 +251,55 @@
             }
         }
 
+        async function loadStandings() {
+            const tableBody = document.getElementById('standings_table_body');
+
+            try {
+                // Посылаем запрос к нашему серверу
+                const response = await fetch('http://127.0.0.1:18080/api/standings');
+                // Переводим в JSON формат
+                const drivers = await response.json();
+
+                // Очищаем заглушку Загрузка данных
+                tableBody.innerHTML = '';
+
+                // Если сервер вернул пустой массив
+                if (drivers.length === 0) {
+                    tableBody.innerHTML = '<p>Гонки не найдены.</p>';
+                    return;
+                }
+
+                // Счётчик позиций
+                let position = 1;
+
+                // Циклом проходимся по каждому гонщику
+                drivers.forEach(driver => {
+                    // Создаем карточку
+                    const raw = document.createElement('tr');
+
+                    //Заполянем карточку данными
+                    raw.innerHTML = `
+                    <td><b>${position}</b></td>
+                    <td>${driver.full_name} (№${driver.number})</td>
+                    <td>${driver.points}</td>
+                    `;
+
+                    // Добавляем готовую карточку на страницу
+                    tableBody.appendChild(raw);
+                    position++;
+                })
+            }
+            catch (error) {
+                console.error("Ошибка загрузки:", error);
+                tableBody, innerHTML = `<tr><td colsplan="3" style="text-align: center; color: #e10600;">❌ Ошибка связи с C++</td></tr>`;
+            }
+        }
+
         // Запускаем загрузку календаря автоматически при открытии страницы
-        window.onload = loadCalendar;
+        window.onload = function () {
+            loadCalendar(); // Запуск календаря
+            loadStandings(); // Запуск таблицы
+        };
     </script>
 </BODY>
 </HTML>
