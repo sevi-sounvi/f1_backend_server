@@ -48,7 +48,9 @@ int main() {
 
             // API возвращает массив гонок. Проходим по каждому элементу массива циклом
             for (const auto& item : parsedJson) {
-                json race;;
+                json race;
+
+                if (!item.is_object()) continue; // На всякий случай защищаем и календарь
 
                 // Достаем данные из JSON по ключам (названия ключей мы берем из документации OpenF1 API)
                 race["id"] = item.value("meeting_key", 0);
@@ -64,7 +66,7 @@ int main() {
             // Задаем тип контента application/json, чтобы браузер или приложение понимали формат
             crow::response res;
             res.set_header("Content-Type", "application/json");
-             // ВОТ ЭТА КРИТИЧЕСКИ ВАЖНАЯ СТРОЧКА ДЛЯ КЛИЕНТА (СНИМАЕТ CORS ОШИБКУ!)
+            // ВОТ ЭТА КРИТИЧЕСКИ ВАЖНАЯ СТРОЧКА ДЛЯ КЛИЕНТА (СНИМАЕТ CORS ОШИБКУ!)
             res.set_header("Access-Control-Allow-Origin", "*");
             res.write(responseJson.dump()); // dump() превращает JSON-объект обратно в строку для отправки
             return res;
@@ -75,8 +77,47 @@ int main() {
             return res;
         }
     });
+
+    CROW_ROUTE(app, "/api/standings")([]() {
+        wstring host = L"api.openf1.org";
+        wstring path = L"/v1/drivers?session_key=latest";
+
+        string rawJsonData = makeHttpRequest(host, path);
+
+        try {
+            json parsedJson = json::parse(rawJsonData);
+            json responseJson = json::array();
+
+            for (const auto& item : parsedJson) {
+                json driver;
+
+                if (!item.is_object()) {
+                    continue; // Если это не объект (а строка), просто пропускаем этот элемент и идем дальше
+                }
+
+                driver["number"] = item.value("driver_number", 0);
+                driver["full_name"] = item.value("broadcast_name", "Unknown Name");
+                driver["points"] = 100;
+
+                responseJson.push_back(driver);
+            }
+
+            crow::response res;
+            res.set_header("Content-Type", "application/json");
+            res.set_header("Access-Control-Allow-Origin", "*");
+            res.write(responseJson.dump());
+            return res;
+        }
+        catch (const exception& e) {
+            crow::response res(500);
+            res.write("Internal Server Error: " + string(e.what()));
+            return res;
+        }
+    });
+
     cout << "Сервер успешно запущен на порту 18080!" << endl;
-    cout << "Для проверки открой в браузере: http://localhost:18080/api/calendar" << endl;
+    cout << "Для проверки календаря открой в браузере: http://localhost:18080/api/calendar" << endl;
+    cout << "Для проверки гонщиков открой в браузере: http://localhost:18080/api/standings" << endl;
 
     // Запускаем сервер на порту 18080. 
     // Программа замрет на этой строчке и будет бесконечно слушать сеть.

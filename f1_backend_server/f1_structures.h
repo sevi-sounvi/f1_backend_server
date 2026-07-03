@@ -12,3 +12,10 @@ struct F1Meeting {
 	string circuitKey;
 	string dateStart;
 };
+
+// Структура о пилотах и их очках
+struct F1DriverStanding {
+	int number;
+	string full_name;
+	float points;
+};
