@@ -19,3 +19,9 @@ struct F1DriverStanding {
 	string full_name;
 	float points;
 };
+
+// Структура о командах и командном зачете
+struct F1ConstructorStanding {
+	string name;
+	float points;
+};

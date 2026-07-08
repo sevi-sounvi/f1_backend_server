@@ -124,13 +124,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Database.cpp" />
     <ClCompile Include="f1_backend_server.cpp" />
     <ClCompile Include="network.cpp" />
+    <ClCompile Include="sqlite3.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="crow_all.h" />
+    <ClInclude Include="Database.h" />
     <ClInclude Include="f1_structures.h" />
     <ClInclude Include="network.h" />
+    <ClInclude Include="sqlite3.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\f1 frontend\index.html" />

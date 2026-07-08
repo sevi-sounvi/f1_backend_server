@@ -124,7 +124,7 @@
 
         .drivers-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(2800px, 1fr);
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 15px;
             margin-top: 20px;
             padding: 10px;
@@ -346,7 +346,7 @@
 
             try {
                 // Посылаем запрос к нашему серверу
-                const response = await fetch('http://127.0.0.1:18080/api/standings');
+                const response = await fetch('http://127.0.0.1:18080/api/driverstandings');
                 // Переводим в JSON формат
                 const drivers = await response.json();
 
@@ -385,10 +385,10 @@
             }
         }
 
-        async function loadDrivers() {
+        async function loadDrivers()s {
             const cardsDrivers = document.getElementById('drivers-cards-container');
             try {
-                const response = await fetch('http://127.0.0.1:18080/api/standings')
+                const response = await fetch('http://127.0.0.1:18080/api/driverstandings')
                 const drivers = await response.json();
                 cardsDrivers.innerHTML = '';
 

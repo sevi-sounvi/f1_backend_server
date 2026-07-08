@@ -12,11 +12,12 @@
 #include <vector>
 #include <windows.h>
 #include "network.h"
+#include "sqlite3.h"
 #include "f1_structures.h"
-// Подключаем JSON и Crow
+// Подключаем JSON, Crow, SQLite
 #include <nlohmann/json.hpp> 
 #include "crow_all.h"
-
+#include "sqlite3.h"
 
 
 using namespace std;
@@ -78,7 +79,7 @@ int main() {
         }
     });
 
-    CROW_ROUTE(app, "/api/standings")([]() {
+    CROW_ROUTE(app, "/api/driverstandings")([]() {
         wstring host = L"api.jolpi.ca";
         wstring path = L"/ergast/f1/2026/driverstandings.json"; 
 
@@ -128,6 +129,48 @@ int main() {
         }
         catch (const exception& e) {
             crow::response res(500);
+            res.write("Internal Server Error (Teams): " + string(e.what()));
+            return res;
+        }
+    });
+
+    CROW_ROUTE(app, "/api/constructorStandings") ([]() {
+        const wstring host = L"api.jolpi.ca";
+        const wstring path = L"/ergast/f1/2026/constructorStandings.json";
+
+        string rawJsonData = makeHttpRequest(host, path);
+
+        try {
+            json parsedJson = json::parse(rawJsonData);
+            json responseJson = json::array();
+
+            auto standingsLists = parsedJson["MRData"]["StandingsTable"]["StandingsLists"];
+            
+            if (!standingsLists.empty()) {
+                auto constructorStandings = standingsLists[0]["ConstructorStandings"];
+
+                for (const auto& item : constructorStandings) {
+                    json constructor;
+
+                    if (!item.is_object()) continue;
+
+                    auto constructorInfo = item["Constructor"];
+                    constructor["name"] = constructorInfo.value("name", "Unknown name");
+                    string pointStr = item.value("points", "0");
+                    constructor["points"] = stof(pointStr);
+
+                    responseJson.push_back(constructor);
+                }
+
+                crow::response res;
+                res.set_header("Content-Type", "application/json");
+                res.set_header("Access-Control-Allow-Origin", "*");
+                res.write(responseJson.dump());
+                return res;
+            }
+        }
+        catch (const exception& e) {
+            crow::response res(500);
             res.write("Internal Server Error: " + string(e.what()));
             return res;
         }
@@ -135,7 +178,9 @@ int main() {
 
     cout << "Сервер успешно запущен на порту 18080!" << endl;
     cout << "Для проверки календаря открой в браузере: http://localhost:18080/api/calendar" << endl;
-    cout << "Для проверки гонщиков открой в браузере: http://localhost:18080/api/standings" << endl;
+    cout << "Для проверки гонщиков открой в браузере: http://localhost:18080/api/driverstandings" << endl;
+    cout << "Для проверки конструкторов открой в браузере: http://localhost:18080/api/constructorStandings" << endl;
+
 
     // Запускаем сервер на порту 18080. 
     // Программа замрет на этой строчке и будет бесконечно слушать сеть.
