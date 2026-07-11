@@ -17,7 +17,7 @@
 // Подключаем JSON, Crow, SQLite
 #include <nlohmann/json.hpp> 
 #include "crow_all.h"
-#include "sqlite3.h"
+#include "Database.h"
 
 
 using namespace std;
@@ -28,6 +28,9 @@ using json = nlohmann::json;
 int main() {
     // Настраиваем консоль Windows, чтобы она корректно отображала UTF-8 (текст на английском/русском)
     SetConsoleOutputCP(CP_UTF8);
+
+    // Запуск БД
+    initDatabase();
 
     cout << "=== ИНИЦИАЛИЗАЦИЯ F1 BACKEND-СЕРВЕРА ===" << endl;
 
@@ -176,10 +179,64 @@ int main() {
         }
     });
 
+    CROW_ROUTE(app, "/api/news") ([]() {
+        // Вызов функциb из database.h, которая возвращает string с JSON-массивом новостей
+        string newsJsonString = getNewsFromDB();
+
+        crow::response res;
+
+        // Указываем заголовок
+        res.set_header("Content-Type", "application/json");
+        // Добавляем разрешение CORS
+        res.set_header("Access-Control-Allow-Origin", "*");
+
+        // Записываем JSON-строку в ответ
+        res.write(newsJsonString);
+        return res;
+    });
+
+    // РОУТ 5: АДМИНКА ДЛЯ ДОБАВЛЕНИЯ НОВОСТИ В БАЗУ ДАННЫХ
+    CROW_ROUTE(app, "/api/news/add").methods(crow::HTTPMethod::Post)([](const crow::request& req) {
+        try {
+            // Парсим JSON-данные, которые нам прислал клиент внутри тела запроса (req.body)
+            auto incomingJson = json::parse(req.body);
+
+            // Вытаскиваем из присланного JSON заголовок, текст и дату статьи
+            string title = incomingJson.value("title", "No title");
+            string content = incomingJson.value("content", "No content");
+            string date = incomingJson.value("date", "09.07.2026");
+
+            // Вызов функции записи в БД
+            bool success = addNewsToDB(title, content, date);
+
+            crow::response res;
+            res.set_header("Content-Type", "application/json");
+            res.set_header("Access-Control-Allow-Origin", "*");
+            
+            if (success) {
+                res.write("{\"success\": \"success\", \"message\": \"Новость успешно добавлена!\"}");
+            }
+            else {
+                res.code = 500;
+                res.write("{\"status\": \"error\", \"message\": \"Не удалось записать в БД\"}");
+            }
+            return res;
+        }
+        catch (const exception& e) {
+            crow::response res(400); // Ошибка неверного запроса
+            res.write("Bad Request: " + string(e.what()));
+            return res;
+        }
+    });
+
     cout << "Сервер успешно запущен на порту 18080!" << endl;
     cout << "Для проверки календаря открой в браузере: http://localhost:18080/api/calendar" << endl;
     cout << "Для проверки гонщиков открой в браузере: http://localhost:18080/api/driverstandings" << endl;
     cout << "Для проверки конструкторов открой в браузере: http://localhost:18080/api/constructorStandings" << endl;
+    cout << "Для проверки новостей открой в браузере: http://localhost:18080/api/news" << endl;
+    cout << "Для проверки новостей открой в браузере: http://localhost:18080/api/news/add" << endl;
+
+
 
 
     // Запускаем сервер на порту 18080. 
@@ -188,3 +245,11 @@ int main() {
 
     return 0;
 }
+
+/* curl -X POST http://localhost:18080/api/news/add 
+-H "Content-Type: application/json" -d "
+{\"title\":\"Итоги бешеной квалификации в Сильверстоуне!\",
+\"content\":\"Борьба за поул-позицию Гран-при Великобритании завершилась! 
+Пилоты показали феноменальный темп, а трибуны ревели от восторга. 
+Наша база данных SQLite успешно зафиксировала этот исторический заезд.\",
+\"date\":\"11.07.2026\"}" */
